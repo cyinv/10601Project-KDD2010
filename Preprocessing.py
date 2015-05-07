@@ -5,6 +5,10 @@ rawTrain = "/home/vincy/course/machine_learning/project/dataset/all_train.txt";
 rawTest = "/home/vincy/course/machine_learning/project/dataset/all_test.txt";
 train1 = "/home/vincy/course/machine_learning/project/dataset/train1.txt";
 train2 = "/home/vincy/course/machine_learning/project/dataset/train2.txt";
+test = "/home/vincy/course/machine_learning/project/dataset/test.txt"
+
+# 113 values in this dict
+kcdict = "/home/vincy/course/machine_learning/project/dataset/kcdict.txt"
 
 
 ## filter raw data, only save 7 columns that we are interested.
@@ -24,8 +28,10 @@ def filterRawData(filename, savename):
         for i in range(len(parts)):
             if i in {0,4,6,7,8,9,10,11,12,13,14,15,16}:
                 continue;
-            of.write(parts[i] + '\t');
-        of.write('\n');
+            of.write(parts[i]);
+            if i < 18:
+                of.write("\t")
+#         of.write('\n');
         line = f.readline()
     
     of.close()
@@ -42,10 +48,19 @@ def buildDictionary(datafile, savefile, column_number):
     i = 0;
     while line:
         parts = line.split('\t');
-        if not dictionary.has_key(parts[column_number]):
-            i += 1
-            dictionary.update((parts[column_number], i));
-            of.write(parts[column_number]+'\n');
+        
+        # for ~~ situations. Opportunity cost and the KC
+        rparts = parts[column_number].split("~~")
+        
+        for key in rparts:
+            if key == "":
+                continue;
+            
+            if not dictionary.has_key(key):
+                i += 1
+                dictionary.update({key: i});
+                of.write(key+'\n');
+                
         line = f.readline()
     
     f.close()
@@ -64,13 +79,16 @@ def readDictionary(datafile):
     print "read dictionary from" + datafile + " done!."
     return dic;
     
-    
-def generateVectorFeature(dic, file):
+# expand one column item into a many column vector feature
+# the way we use to expand the feature is for one column each.
+# TODO: 
+def generateVectorFeature(dic, datafile, column_in_datafile, output):
     
     print; 
     
 def main(args):
-    filterRawData(rawTrain, train1)
+#     filterRawData(rawTrain, train1)
+    buildDictionary(train1,kcdict,5)
     
 if __name__ == '__main__':
     main(sys.argv)
