@@ -3,7 +3,8 @@ import sys
 import re
 import numpy as np
 import csv
-from scipy import sparse
+from scipy import sparse, io
+from scipy.sparse import hstack
 
 ROOTDIR = "/home/vincy/course/machine_learning/project/dataset/"
 train1 = ROOTDIR + "train1.txt"
@@ -106,6 +107,10 @@ def generateVectorFeature(dic, datafile, columnIdx_in_datafile, output, mergeKCO
     line = fdata.readline()
     maxHit = 0;
     while line:
+        
+        if sampleCounter % 20000 == 0:
+            print 'vectorizing ' + str(sampleCounter) + 'th sample.'
+            
         line = line.strip('\n')
         if line != '':
             curHit = 0;
@@ -121,21 +126,18 @@ def generateVectorFeature(dic, datafile, columnIdx_in_datafile, output, mergeKCO
                         colDic.update({acol:idx})
                     idx += 1;
             
-            colCounter = 0;
-            
             # now output the generated vector
             for i in range(len(dic)):
                 if(colDic.has_key(dic[i])):
                     if mergeKCOP == None:
-                        of.write(str(sampleCounter) + ',' + str(colCounter) + ',1\n')
+                        of.write(str(sampleCounter) + ',' + str(i) + ',1\n')
                     else:
                         # FIXME: this is ugly.....
                         # use this extra condition branch to fix the KC problem.
-                        vals = line.split("\t")[mergeKCOP]
-                        of.write(str(sampleCounter) + ',' + str(colCounter) + ',' +  vals[ colDic.get(dic[i])] + '\n')
+                        vals = line.split("\t")[mergeKCOP].split('~~')
+                        of.write(str(sampleCounter) + ',' + str(i) + ',' +  vals[ colDic.get(dic[i])] + '\n')
                     
                     curHit += 1;
-                colCounter += 1;
                 
             if curHit > maxHit:
                 maxHit = curHit
@@ -280,13 +282,15 @@ before i use them.
 '''
 def extractStepName(dictfile, inputfile, outputfile, testinput, testoutput):    
     
-    tokenizeDictionary(dictfile, ROOTDIR + "tokenizedstpDict.txt")
-    diction = readDictionary(ROOTDIR + "tokenizedstpDict.txt")
+    tokenizeDictionary(dictfile, ROOTDIR + "dict_step_TKNZED_temp.txt")
+    buildDictionary(ROOTDIR + "dict_step_TKNZED_temp.txt", ROOTDIR + "dict_step_TKNZED.txt", 0)
+    
+    diction = readDictionary(ROOTDIR + "dict_step_TKNZED.txt")
     
     numTokenizer = re.compile(r'\d')
     # don't need to tokenize this vector.
-    generateVectorFeature(diction, inputfile, 4, outputfile, numTokenizer, tokenizedString)
-    generateVectorFeature(diction, testinput, 4, testoutput, numTokenizer, tokenizedString)
+    generateVectorFeature(diction, inputfile, 4, outputfile, None, numTokenizer, tokenizedString)
+    generateVectorFeature(diction, testinput, 4, testoutput, None, numTokenizer, tokenizedString)
     print 'Done.'
     
     
@@ -298,8 +302,8 @@ def extractKC(dictfile, inputfile, outputfile, testinput, testoutput):
     diction = readDictionary(dictfile)
     # don't need to tokenize this vector.
     
-    generateVectorFeature(diction, inputfile, 5, 6,outputfile)
-    generateVectorFeature(diction, testinput, 5, 6,testoutput)
+    generateVectorFeature(diction, inputfile, 5, outputfile, 6)
+    generateVectorFeature(diction, testinput, 5, testoutput, 6)
         
     print 'KC & OP Vectoization Done.'
     
@@ -324,37 +328,46 @@ def main(args):
     Step 1
     filter the raw data
     '''
-    filterRawData(ROOTDIR+"all_train.txt", test)
-    filterRawData(ROOTDIR+"all_test.txt", train1)
-
-    '''
-    Step 2
-    build dictionaries for the categorical features
-    '''
-    buildDictionary(train1,ROOTDIR+"sIdDict.txt",1)
-    buildDictionary(train1,ROOTDIR+"sectionDict.txt",2)
-    buildDictionary(train1,ROOTDIR+"problemDict.txt",3)
-    buildDictionary(train1,ROOTDIR+"stpDict.txt",4)
-    buildDictionary(train1, ROOTDIR+"kcDict.txt",5)
-
-    '''
-    Step 3
-    process data, extend the columns into feature vectors
-    '''
-    extractLabels(train1, ROOTDIR+"trainLabel.txt", test, ROOTDIR+"testlabel.txt")
+#     filterRawData(ROOTDIR+"all_train.txt", train1)
+#     filterRawData(ROOTDIR+"all_test.txt", test)
+# 
+#     '''
+#     Step 2
+#     build dictionaries for the categorical features
+#     '''
+#     buildDictionary(train1,ROOTDIR+"dict_sId.txt",1)
+#     buildDictionary(train1,ROOTDIR+"dict_section.txt",2)
+#     buildDictionary(train1,ROOTDIR+"dict_problem.txt",3)
+#     buildDictionary(train1,ROOTDIR+"dict_step.txt",4)
+#     buildDictionary(train1, ROOTDIR+"dict_kc.txt",5)
+# 
+#     '''
+#     Step 3
+#     process data, extend the columns into feature vectors
+#     '''
+#     extractLabels(train1, ROOTDIR+"label_train.txt", test, ROOTDIR+"label_test.txt")
     
-    extractStudentId(ROOTDIR+"sIdDict.txt", train1, ROOTDIR+"sIDtrain.txt", test, ROOTDIR+"sIDtest.txt")
-    extractProblemHierarchy(ROOTDIR+"sectionDict.txt", train1, ROOTDIR+"seciontrain.txt",test,ROOTDIR+"sectiontest.txt")
-    extractProblemName(ROOTDIR+"problemDict.txt", train1, ROOTDIR+"problemtrain.txt",test,ROOTDIR+"problemtest.txt")
-    extractStepName(ROOTDIR+"stpDict.txt",train1,ROOTDIR+"stptrain.txt",test,ROOTDIR+"stptest.txt")
-    extractKC(ROOTDIR + "kcDict.txt", train1, ROOTDIR + "kcTrain.txt", test, ROOTDIR + "kcTest.txt")
-    
+#     extractStudentId(ROOTDIR+"dict_sId.txt", train1, ROOTDIR+"train_sId.txt", test, ROOTDIR+"test_sId.txt")
+#     extractProblemHierarchy(ROOTDIR+"dict_section.txt", train1, ROOTDIR+"train_secion.txt",test,ROOTDIR+"test_section.txt")
+#     extractProblemName(ROOTDIR+"dict_problem.txt", train1, ROOTDIR+"train_problem.txt",test,ROOTDIR+"test_problem.txt")
+#     extractStepName(ROOTDIR+"dict_step.txt",train1,ROOTDIR+"train_step.txt",test,ROOTDIR+"test_step.txt")
+    extractKC(ROOTDIR + "dict_kc.txt", train1, ROOTDIR + "train_kc.txt", test, ROOTDIR + "test_kc.txt")
+#     
     
     '''
     Step 4
-    concatenating several columns of vector features into a single data file
+    concatenating several columns of vector features into a single data file for training
     '''
-    
+#     labelstack, select = LoadSparseMatrix(ROOTDIR+"label_test.txt")
+#     sidstack, select = LoadSparseMatrix(ROOTDIR+"test_sId.txt")
+#     
+#     
+#     io.mmwrite("temp.mtx",labelstack)
+#     labelstack = io.mmread("temp.mtx")
+#     io.mmwrite("temp1.mtx",sidstack)
+#     
+#     superstack = hstack(labelstack, sidstack)
+#     io.mmwrite("temp3.mtx",superstack)
     '''
     Step 5
     train it!
