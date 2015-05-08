@@ -321,7 +321,19 @@ KC				&112\\
 \end{center}
 \end{table}
 Compared to others features, the dimension of "step" is very high, which makes it a highly sparse vector. However, many of them are very similar, like "-4x+2 = 7" and "-4x+2-2 = 7-2", "x-500000 = 2" and "x-5000000 = 40000". We remove all the numbers and spaces in the step names, and then get 26582 features. We use the lower dimensional "step" to feed the Naive Bayes, Logistic Regression, and SVM classifiers again. Here are the results:
-
+\begin{table}[h]
+\caption{Comparison of "step" compression}
+\label{sample-table}
+\begin{center}
+\begin{tabular}{lllll}
+\multicolumn{1}{c}{\bf Clssifier}  &\multicolumn{1}{c}{\bf Tarin Accuracy Before Compression}  &\multicolumn{1}{c}{\bf Test Accuracy Before Compression} &\multicolumn{1}{c}{\bf Tarin Accuracy After Compression} &\multicolumn{1}{c}{\bf Test Accuracy After Compression}
+\\ \hline \\
+Naive Bayes		&67.53\% 		&64.40\%			&69.74\%		&65.87\%\\
+Logistic Regression(L2)	&73.04\%		&74,38\%		&80.53\%		&80.87\%\\
+SVM				&73.02\%		&74.86\%		&76.71\%		&76.83\%\\
+\end{tabular}
+\end{center}
+\end{table}
 
 
 \section{Conclusion}
