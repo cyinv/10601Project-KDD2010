@@ -2,18 +2,28 @@ import time
 import sys
 import re
 import numpy as np
+import scipy as sp
 import csv
 from scipy import sparse, io
 from scipy.sparse import hstack
+from sklearn import pipeline, svm
+from sklearn.svm import LinearSVC
+from sklearn.preprocessing import scale
+
+
+from sklearn import datasets
+from sklearn.decomposition import PCA
+from sklearn.externals import joblib
 
 ROOTDIR = "/home/vincy/course/machine_learning/project/dataset/"
 train1 = ROOTDIR + "train1.txt"
 test = ROOTDIR + "test.txt"
 
-'''
-process the raw data, filter out the un-wanted columns.
-'''
+
 def filterRawData(filename, savename):
+    '''
+    process the raw data, filter out the un-wanted columns.
+    '''
     f = open(filename)
     of = open(savename, "w")
     
@@ -38,10 +48,11 @@ def filterRawData(filename, savename):
     f.close()
     print "done!"
     
-'''
-build dictionary for the given column from the data file.
-'''   
+    
 def buildDictionary(datafile, savefile, column_number):
+    '''
+    build dictionary for the given column from the data file.
+    '''   
     f = open(datafile)
     of = open(savefile, "w")
     
@@ -70,10 +81,10 @@ def buildDictionary(datafile, savefile, column_number):
     print str(i-1) + " dimension of features, save dictionary to" + savefile + " done!."
     
     
-'''
-read a dictionary from file 
-'''    
 def readDictionary(datafile):
+    '''
+    read a dictionary from file 
+    '''    
     dic = []; ## use a list to traverse through.
     f = open(datafile)
     f.readline() # ignore the first line.
@@ -86,11 +97,11 @@ def readDictionary(datafile):
     return dic;
     
     
-'''
-use the dictionary to expand the single column in the data into a sparse vector.
-save the vectorized data to file directly.
-'''
 def generateVectorFeature(dic, datafile, columnIdx_in_datafile, output, mergeKCOP = None, pattern = None, tokenizer = None):
+    '''
+    use the dictionary to expand the single column in the data into a sparse vector.
+    save the vectorized data to file directly.
+    '''
     # the feature in each line of the data file will be extended to a len(dic) vector
     fdata = open(datafile)
     of = open(output, "w")
@@ -149,11 +160,13 @@ def generateVectorFeature(dic, datafile, columnIdx_in_datafile, output, mergeKCO
     print str(sampleCounter) + " examples processed. maximum dimension covered: "+ str(maxHit)+"!"; 
     
 
-'''
-simply extract the column elements as numbers.
-used for extract label value.
-'''
+
 def generateNumericFeature(datafile, columnIdx_in_datafile, output):
+    '''
+    @deprecated:  useless...
+    simply extract the column elements as numbers.
+    used for extract label value.
+    '''
     # the feature in each line of the data file will be extended to a len(dic) vector
     fdata = open(datafile)
     of = open(output, "w")
@@ -179,11 +192,41 @@ def generateNumericFeature(datafile, columnIdx_in_datafile, output):
     of.close()   
     print str(sampleCounter) + " samples processed. With numerical feature in column: " + str(columnIdx_in_datafile); 
     
+    
+def generateLabel(datafile, columnIdx_in_datafile, output):
+    '''
+    build a sparse csr matrix, then save them to file.
+    '''
+    # the feature in each line of the data file will be extended to a len(dic) vector
+    fdata = open(datafile)
+    fdata.readline()    # ignore the first title line.
+    
+    row = []
+    data = []
+    
+    sampleCounter = 0; # this is also the row counter
+
+    # output each line
+    line = fdata.readline()
+    while line:
+        line = line.strip('\n')
+        if line != '':
+            item = line.split('\t')[columnIdx_in_datafile]
+            row.append(sampleCounter)
+            data.append(int(item))
+                
+        sampleCounter += 1
+        line = fdata.readline()
+    fdata.close()
+#     lbs = sparse.csr_matrix((data, row))
+    np.save(output, data)
+    print str(sampleCounter) + " samples processed. With numerical feature in column: " + str(columnIdx_in_datafile); 
         
-'''
-a very naive tokenizer, simply remove all the number characters in the string.
-'''
+        
 def tokenizeDictionary(inputfile, outputfile):
+    '''
+    a very naive tokenizer, simply remove all the number characters in the string.
+    '''
     f = open(inputfile)
     of = open(outputfile, "w")
     
@@ -209,39 +252,39 @@ def tokenizeDictionary(inputfile, outputfile):
     
     print "tokenize done!."
 
-'''
-tokenize a string using the given pattern. Replace the matched contents to '', also remove spaces.
-'''
 def tokenizedString(string, pattern):
+    '''
+    tokenize a string using the given pattern. Replace the matched contents to '', also remove spaces.
+    '''
     nline = pattern.sub('', string)
     if nline != None:
         nline = nline.replace(' ','');
         
     return nline
 
-'''
-Load a sparse matrix from file then return the matrix and the index.
-'''
 def LoadSparseMatrix(csvfile):
-        val = []
-        row = []
-        col = []
-        select = []
-        f = open(csvfile)
-        f.readline() # ignore the first title line.
-        reader = csv.reader(f)
-        for line in reader:
-                row.append( float(line[0]) )
-                col.append( float(line[1]) )
-                val.append( float(line[2]) )
-                select.append( (float(line[0]), float(line[1])) )
-        return sparse.csr_matrix( (val, (row, col)) ), select
+    '''
+    Load a sparse matrix from file then return the matrix and the index.
+    '''
+    val = []
+    row = []
+    col = []
+#     select = []
+    f = open(csvfile)
+    f.readline() # ignore the first title line.
+    reader = csv.reader(f)
+    for line in reader:
+            row.append( float(line[0]) )
+            col.append( float(line[1]) )
+            val.append( float(line[2]) )
+#             select.append( (float(line[0]), float(line[1])) )
+    return sparse.csr_matrix( (val, (row, col)) )#, select
 
-'''
-generate student ID sparse matrix
-'''
+
 def extractStudentId(dictfile, inputfile, outputfile, testinput, testoutput):    
-    
+    '''
+    generate student ID sparse matrix
+    '''
     diction = readDictionary(dictfile)
     
     # don't need to tokenize this vector.
@@ -250,11 +293,11 @@ def extractStudentId(dictfile, inputfile, outputfile, testinput, testoutput):
      
     print 'Student ID Vectorization Done.'
 
-'''
-Currently I use the problem + section as a whole.
-'''
-def extractProblemHierarchy(dictfile, inputfile, outputfile, testinput, testoutput):    
     
+def extractProblemHierarchy(dictfile, inputfile, outputfile, testinput, testoutput):    
+    '''
+    Currently I use the problem + section as a whole.
+    '''
     diction = readDictionary(dictfile)
     
     # don't need to tokenize this vector.
@@ -263,11 +306,11 @@ def extractProblemHierarchy(dictfile, inputfile, outputfile, testinput, testoutp
     
     print 'ProblemHierarchy Vectorization Done.'
 
-'''
-Currently I use the problemname directly.
-'''
-def extractProblemName(dictfile, inputfile, outputfile, testinput, testoutput):    
        
+def extractProblemName(dictfile, inputfile, outputfile, testinput, testoutput):    
+    '''
+    Currently I use the problemname directly.
+    '''
     diction = readDictionary(dictfile)
     
     # don't need to tokenize this vector.
@@ -276,12 +319,12 @@ def extractProblemName(dictfile, inputfile, outputfile, testinput, testoutput):
     
     print 'ProblemName Vectorization Done.'
 
-'''
-Due to the fact that the dimension is too high, i apply a tokenizer to the string first 
-before i use them.
-'''
-def extractStepName(dictfile, inputfile, outputfile, testinput, testoutput):    
     
+def extractStepName(dictfile, inputfile, outputfile, testinput, testoutput):    
+    '''
+    Due to the fact that the dimension is too high, i apply a tokenizer to the string first 
+    before i use them.
+    '''
     tokenizeDictionary(dictfile, ROOTDIR + "dict_step_TKNZED_temp.txt")
     buildDictionary(ROOTDIR + "dict_step_TKNZED_temp.txt", ROOTDIR + "dict_step_TKNZED.txt", 0)
     
@@ -294,11 +337,11 @@ def extractStepName(dictfile, inputfile, outputfile, testinput, testoutput):
     print 'Done.'
     
     
-'''
-vectorize the KC. 
-'''
-def extractKC(dictfile, inputfile, outputfile, testinput, testoutput):    
     
+def extractKC(dictfile, inputfile, outputfile, testinput, testoutput):    
+    '''
+    vectorize the KC. 
+    '''
     diction = readDictionary(dictfile)
     # don't need to tokenize this vector.
     
@@ -314,15 +357,19 @@ This value is now integrated with KC. (as a combination)
 def extractOpportunityCount(inputfile, outputfile, testinput, testoutput): 
     print;
   
-'''
-output the labels in a single file as a sparse matrix format.
-'''
+    
 def extractLabels(inputfile, outputfile, testinput, testoutput):
-    
-    generateNumericFeature(inputfile, 0, outputfile)
-    generateNumericFeature(testinput, 0, testoutput)
-    
+    '''
+    output the labels in a single file as a sparse matrix format.
+    '''
+#     generateNumericFeature(inputfile, 0, outputfile)
+#     generateNumericFeature(testinput, 0, testoutput)
+    generateLabel(inputfile, 0, outputfile)
+    generateLabel(testinput, 0, testoutput)
       
+def applySVM(data,label,modeloutput):
+    print;  
+    
 def main(args):
     '''
     Step 1
@@ -331,55 +378,80 @@ def main(args):
 #     filterRawData(ROOTDIR+"all_train.txt", train1)
 #     filterRawData(ROOTDIR+"all_test.txt", test)
 # 
-#     '''
-#     Step 2
-#     build dictionaries for the categorical features
-#     '''
+    '''
+    Step 2
+    build dictionaries for the categorical features
+    '''
 #     buildDictionary(train1,ROOTDIR+"dict_sId.txt",1)
 #     buildDictionary(train1,ROOTDIR+"dict_section.txt",2)
 #     buildDictionary(train1,ROOTDIR+"dict_problem.txt",3)
 #     buildDictionary(train1,ROOTDIR+"dict_step.txt",4)
 #     buildDictionary(train1, ROOTDIR+"dict_kc.txt",5)
 # 
-#     '''
-#     Step 3
-#     process data, extend the columns into feature vectors
-#     '''
-#     extractLabels(train1, ROOTDIR+"label_train.txt", test, ROOTDIR+"label_test.txt")
+    '''
+    Step 3
+    process data, extend the columns into feature vectors
+    '''
+#     extractLabels(train1, ROOTDIR+"label_train.npy", test, ROOTDIR+"label_test.npy")
     
 #     extractStudentId(ROOTDIR+"dict_sId.txt", train1, ROOTDIR+"train_sId.txt", test, ROOTDIR+"test_sId.txt")
 #     extractProblemHierarchy(ROOTDIR+"dict_section.txt", train1, ROOTDIR+"train_secion.txt",test,ROOTDIR+"test_section.txt")
 #     extractProblemName(ROOTDIR+"dict_problem.txt", train1, ROOTDIR+"train_problem.txt",test,ROOTDIR+"test_problem.txt")
 #     extractStepName(ROOTDIR+"dict_step.txt",train1,ROOTDIR+"train_step.txt",test,ROOTDIR+"test_step.txt")
-    extractKC(ROOTDIR + "dict_kc.txt", train1, ROOTDIR + "train_kc.txt", test, ROOTDIR + "test_kc.txt")
+#     extractKC(ROOTDIR + "dict_kc.txt", train1, ROOTDIR + "train_kc.txt", test, ROOTDIR + "test_kc.txt")
 #     
     
     '''
     Step 4
-    concatenating several columns of vector features into a single data file for training
+    further process the data dimensions before concatenate them together.
     '''
-#     labelstack, select = LoadSparseMatrix(ROOTDIR+"label_test.txt")
-#     sidstack, select = LoadSparseMatrix(ROOTDIR+"test_sId.txt")
+#     sIdMtx = LoadSparseMatrix(ROOTDIR+"train_sId.txt")
+#     sectionMtx = LoadSparseMatrix(ROOTDIR+"train_secion.txt")
+#     problemMtx = LoadSparseMatrix(ROOTDIR+"train_problem.txt")
+#     stepMtx = LoadSparseMatrix(ROOTDIR+"train_step.txt")
+#     kdMtx = LoadSparseMatrix(ROOTDIR + "train_kc.txt")
 #     
+#    
+#     print 'Load Sparse Data Done.'
 #     
-#     io.mmwrite("temp.mtx",labelstack)
-#     labelstack = io.mmread("temp.mtx")
-#     io.mmwrite("temp1.mtx",sidstack)
-#     
-#     superstack = hstack(labelstack, sidstack)
-#     io.mmwrite("temp3.mtx",superstack)
+#     data = hstack((sIdMtx, sectionMtx),format='csr')
+#     data = hstack((data, problemMtx),format='csr')
+#     data = hstack((data, stepMtx),format='csr')
+#     data = hstack((data, kdMtx),format='csr')
+    
+#     io.mmwrite(ROOTDIR+"TRAINDATA.mtx",data)
+    data = io.mmread(ROOTDIR+"TRAINDATA.mtx")
+    label = np.load(ROOTDIR+"label_train.npy")
+    print 'Concatenation Done.'
+    
+    print str(label.shape)
+    print str(data.shape)
     '''
     Step 5
+    concatenating several columns of vector features into a single data file for training
+    labelstack = io.mmread("temp.mtx")
+    '''
+    
+    
+    
+    '''
+    Step 6
     train it!
     '''
-#     generateVectorFeature(dic, test, 5, ROOTDIR+"sparseKCtest.txt")
-#     sparsemtx, select = LoadSparseMatrix(ROOTDIR+"sparseKCtest.txt")
+    linear_svm = LinearSVC(C=1.0, class_weight=None, dual=True, fit_intercept=True,
+    intercept_scaling=1, multi_class='ovr', penalty='l2',
+    random_state=None, tol=0.0001, verbose=1)
     
-#     tokenizeDictionary(stpdict,temp)
-#     buildDictionary(temp,stpdictTKNZD,0)
-#     extractOpportunityCount(train1, test, ROOTDIR+"kcDict.txt", ROOTDIR+"kcVecTrain.txt", ROOTDIR+"kcVecTest.txt")
-#     LoadSparseMatrix(temp)
-                   
+    data = scale(data, with_mean=False)
+    
+    linear_svm.fit(data, label)
+    joblib.dump(linear_svm, ROOTDIR+'originalTrain_1.pkl') 
+
+    print 'Trainning Done!'
+    scr = linear_svm.score(data, label)
+    
+    print 'accuracy on the training set is:' + str(scr)
+    
 if __name__ == '__main__':
     main(sys.argv)
     
