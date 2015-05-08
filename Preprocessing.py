@@ -420,17 +420,17 @@ def main(args):
 #     data = hstack((data, kdMtx),format='csr')
     
 #     io.mmwrite(ROOTDIR+"TRAINDATA.mtx",data)
+    '''
+    Step 5
+    concatenating several columns of vector features into a single data file for training
+    labelstack = io.mmread("temp.mtx")
+    '''
     data = io.mmread(ROOTDIR+"TRAINDATA.mtx")
     label = np.load(ROOTDIR+"label_train.npy")
     print 'Concatenation Done.'
     
     print str(label.shape)
     print str(data.shape)
-    '''
-    Step 5
-    concatenating several columns of vector features into a single data file for training
-    labelstack = io.mmread("temp.mtx")
-    '''
     
     
     
@@ -438,15 +438,16 @@ def main(args):
     Step 6
     train it!
     '''
-    linear_svm = LinearSVC(C=1.0, class_weight=None, dual=True, fit_intercept=True,
+    linear_svm = LinearSVC(C=1.0, class_weight=None, loss='squared_hinge', dual=True, fit_intercept=True,
     intercept_scaling=1, multi_class='ovr', penalty='l2',
-    random_state=None, tol=0.0001, verbose=1)
+    random_state=None, tol=0.0001, verbose=1, max_iter=2000)
     
     data = scale(data, with_mean=False)
     
     linear_svm.fit(data, label)
-    joblib.dump(linear_svm, ROOTDIR+'originalTrain_1.pkl') 
-
+    joblib.dump(linear_svm, ROOTDIR+'originalTrain_hinge2_1000.pkl') 
+#     model = joblib.load(ROOTDIR+'originalTrain_1.pkl')
+    
     print 'Trainning Done!'
     scr = linear_svm.score(data, label)
     
