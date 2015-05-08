@@ -304,7 +304,25 @@ AdaBosst	&73.03\%   &74.38\%   &0.5192   &0.5061\\
 
 AdaBoost greatly enhance the accuracy of Naive Bayes.  And the convergence rate of AdaBoost is very fast. After 4 iterations, the error rates of both the training dataset and test dataset converge. In addition, the test error rate deceases as the training error rate increases. There is no overfitting problem, because as the training error rate increases, the classifier is more and more confident.
 
-\subsection{}
+\subsection{Feature Extraction}
+Dimension Reduction:
+\begin{table}[h]
+\caption{Dimension of Each Feature}
+\label{sample-table}
+\begin{center}
+\begin{tabular}{lllll}
+\multicolumn{1}{c}{\bf Feature}  &\multicolumn{1}{c}{\bf Dimension} 
+\\ \hline \\
+Student ID		&574\\
+Problem			&1084\\
+Step				&187539\\
+KC				&112\\
+\end{tabular}
+\end{center}
+\end{table}
+Compared to others features, the dimension of "step" is very high, which makes it a highly sparse vector. However, many of them are very similar, like "-4x+2 = 7" and "-4x+2-2 = 7-2", "x-500000 = 2" and "x-5000000 = 40000". We remove all the numbers and spaces in the step names, and then get 26582 features. We use the lower dimensional "step" to feed the Naive Bayes, Logistic Regression, and SVM classifiers again. Here are the results:
+
+
 
 \section{Conclusion}
 As a conclusion, we plot all the results from previous sections in the same figure as shown in Figure 1 and Figure 2. Despite of the accuracy, we also compare the relative wall clock time consumption of these different learning models, which can be seen from Table 4. 
